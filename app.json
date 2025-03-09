@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Socialbook",
+    "slug": "socialbook",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/appIcon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F1418"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/appIcon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.lazin_mahmud_upol.socialbook"
+    },
+    "web": {
+      "favicon": "./assets/appIcon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6415689a-c3f8-40d8-88c5-d567f52c06d4"
+      }
+    },
+    "plugins": [
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      "expo-font",
+      "expo-secure-store"
+    ]
+  }
+}
