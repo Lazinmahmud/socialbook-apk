@@ -65,7 +65,7 @@ const fetchChats = async () => {
             })
             .sort((a, b) => b.lastMessageTime - a.lastMessageTime); // টাইম অনুযায়ী sort করা
 
-          console.log("✅ Sorted Chats:", userChats); // চেক করার জন্য console.log
+          
 
           setChats(userChats);
           setRefreshing(false); // Stop refreshing after data is fetched

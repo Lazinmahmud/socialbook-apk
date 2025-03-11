@@ -14,7 +14,7 @@ import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 
 export default function HomeScreen({ route }) {
   const fadeAnim1 = useRef(new Animated.Value(1)).current; // প্রথম লোডিং পোস্টের opacity
-  const scrollViewRef = useRef(null);
+  
   const [shuffledUsers, setShuffledUsers] = useState([]);
   const [users, setUsers] = useState([]);
   const navigation = useNavigation();
@@ -29,7 +29,8 @@ export default function HomeScreen({ route }) {
   const [sound, setSound] = useState();
  const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  
+  const [backPressedOnce, setBackPressedOnce] = useState(false); 
+  const [isAtTop, setIsAtTop] = useState(true);
   const videoRef = useRef(null);
   const [currentPlayingId, setCurrentPlayingId] = useState(null);
   const videoRefs = useRef({});
@@ -42,6 +43,11 @@ export default function HomeScreen({ route }) {
   const flatListRef = useRef(null);
   const [postButtonVisible, setPostButtonVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [lastTimestamp, setLastTimestamp] = useState(null);
+const [hasMore, setHasMore] = useState(true);
+const [loadedPosts, setLoadedPosts] = useState([]);
+
+
   useEffect(() => {
         const fetchUnreadMessages = async () => {
             try {
@@ -572,11 +578,13 @@ useEffect(() => {
   // সাউন্ড প্লে করার ফাংশন
   async function playSound() {
     const { sound } = await Audio.Sound.createAsync(
-  //    require('../assets/refresh.mp3') // আপনার mp3 ফাইল
+  //    require('../assets/refresh.mp3')
     );
     setSound(sound);
+
+    await sound.setVolumeAsync(0.5); // ভলিউম ৫০% (0.0 থেকে 1.0 এর মধ্যে মান দিন)
     await sound.playAsync();
-  }
+}
 
   // Cleanup করার জন্য useEffect
   React.useEffect(() => {
@@ -588,57 +596,136 @@ useEffect(() => {
   }, [sound]);
 
   // রিফ্রেশ ফাংশন
-  const onRefresh = useCallback(() => {
-    // সাউন্ড বাজান
-    playSound();
+ const onRefresh = useCallback(() => {
+  playSound(); // রিফ্রেশ সাউন্ড বাজান
+  setIsRefreshing(true); // রিফ্রেশ শুরু করুন
 
-    // রিফ্রেশ প্রসেস শুরু করুন
-    setIsRefreshing(true);
-
-    // পোস্ট ফেচ করুন
-    fetchPosts().then(() => {
-      // ইউজারের প্রোফাইল ডেটা রিফ্রেশ করুন
-      fetchUserNameAndProfile().then(() => {
-        setIsRefreshing(false);
-      });
+  fetchInitialPosts().then(() => {
+    fetchUserNameAndProfile().then(() => {
+      setIsRefreshing(false); // রিফ্রেশ শেষ হলে বন্ধ করুন
     });
-  }, []);
+  });
+}, []);
 
-  
+ const fetchMorePosts = () => {
+  if (!lastTimestamp || !hasMore || loading) return;
 
-  
-  const fetchPosts = () => {
-  setLoading(true); // ফাংশন শুরুতেই লোডিং সেট করুন
+  setLoading(true);
+
   return new Promise((resolve, reject) => {
-    const postsRef = database.ref('All_Post');
+    const postsRef = database.ref('All_Post')
+      .orderByChild('timestamp')
+      .endBefore(lastTimestamp) // শেষ পোস্টের আগেরগুলো লোড করুন
+      .limitToLast(20);
 
-    // ডেটা একবার ফেচ করা হবে
     postsRef.once('value')
       .then((snapshot) => {
         const data = snapshot.val();
         if (data) {
-          const formattedPosts = Object.keys(data).map((key) => ({
+          let newPosts = Object.keys(data).map((key) => ({
             id: key,
             ...data[key],
           }));
-          setPosts(
-            formattedPosts.sort(
-              (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-            )
-          );
+
+          // আগের পোস্টগুলো থেকে নতুন পোস্ট ফিল্টার করা
+          setPosts((prevPosts) => {
+            const existingPostIds = new Set(prevPosts.map(post => post.id));
+            const filteredNewPosts = newPosts.filter(post => !existingPostIds.has(post.id));
+
+            return [...prevPosts, ...filteredNewPosts];
+          });
+
+          // নতুন `lastTimestamp` সেট করা
+          if (newPosts.length > 0) {
+            setLastTimestamp(newPosts[0].timestamp);
+          } else {
+            setHasMore(false);
+          }
         } else {
-          setPosts([]); // যদি কোনো পোস্ট না থাকে
+          setHasMore(false);
         }
-        setLoading(false); // সফল হলে লোডিং বন্ধ করুন
+
+        setLoading(false);
+        resolve();
+      })
+      .catch((error) => {
+        console.error("Error fetching more posts:", error);
+        setLoading(false);
+        reject(error);
+      });
+  });
+};
+
+ const fetchInitialPosts = () => {
+  setLoading(true);
+
+  return new Promise((resolve, reject) => {
+    const postsRef = database.ref('All_Post').orderByChild('timestamp').limitToLast(15);
+
+    postsRef.once('value')
+      .then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          let formattedPosts = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+
+          // পোস্টগুলো shuffle করুন
+          formattedPosts = formattedPosts.sort(() => Math.random() - 0.5);
+
+          setPosts(formattedPosts);
+
+          // **সবচেয়ে পুরনো পোস্টের timestamp সংরক্ষণ করুন**
+          setLastTimestamp(formattedPosts[0]?.timestamp || null);
+          setHasMore(true);
+        } else {
+          setPosts([]);
+          setHasMore(false);
+        }
+
+        setLoading(false);
         resolve();
       })
       .catch((error) => {
         console.error("Error fetching posts:", error);
-        setLoading(false); // ত্রুটি হলেও লোডিং বন্ধ করতে হবে
-        reject(error); // Promise রিজেক্ট করা উচিত
+        setLoading(false);
+        reject(error);
       });
   });
 };
+ 
+ useEffect(() => {
+  fetchInitialPosts(); // প্রথমবার লোড
+  fetchUserNameAndProfile();
+}, []); 
+ 
+ useEffect(() => {
+  const postsRef = database.ref('All_Post').orderByChild('timestamp');
+
+  // নতুন পোস্ট আসলে সেটি যোগ করার জন্য `child_added` ইভেন্ট ব্যবহার
+  const handleNewPost = (snapshot) => {
+    const newPost = { id: snapshot.key, ...snapshot.val() };
+
+    setPosts((prevPosts) => {
+      const existingPostIds = new Set(prevPosts.map(post => post.id));
+
+      // যদি পোস্ট নতুন হয়, তাহলে সেটি লিস্টে যোগ করো
+      if (!existingPostIds.has(newPost.id)) {
+        return [newPost, ...prevPosts];
+      }
+      return prevPosts;
+    });
+  };
+
+  postsRef.on('child_added', handleNewPost);
+
+  // Cleanup function
+  return () => {
+    postsRef.off('child_added', handleNewPost);
+  };
+}, []);
+
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();
@@ -655,33 +742,45 @@ useEffect(() => {
     return formatDistanceToNow(postDate, { addSuffix: true }).replace('about ', '');
   };
 
-  const handleBackPress = () => {
-    if (scrollPosition > 0) {
-      scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true }); // স্ক্রল টপে নিয়ে যাওয়া
-      onRefresh(); // রিফ্রেশ ফাংশন কল
-      return true; // ডিফল্ট ব্যাক অ্যাকশন ব্লক করা
-    }
-    return false; // ডিফল্ট ব্যাক অ্যাকশন অনুমতি দেওয়া
-  };
+const handleBackPress = () => {
+  if (!isAtTop) {
+    // স্ক্রল উপরে নিয়ে যাও
+    scrollToTop();
+    return true; // ব্যাক প্রেস হ্যান্ডেল করা হয়েছে
+  } else {
+    // ব্যাক প্রেস করলে সরাসরি অ্যাপ বন্ধ হবে
+    BackHandler.exitApp();
+    return true;
+  }
+};
 
-  const handleScroll = useCallback((event) => {
-        const newScrollPosition = event.nativeEvent.contentOffset.y;
-        setScrollPosition(newScrollPosition);
+  // FlatList স্ক্রল করার সময় উপরে থাকলে 'isAtTop' আপডেট হবে
+  const handleScroll = (event) => {
+  const contentOffsetY = event.nativeEvent.contentOffset.y;
+  scrollPositionRef.current = contentOffsetY;
+  setIsAtTop(contentOffsetY === 0); // স্ক্রল একদম উপরে থাকলে true
 
-        posts.forEach((post) => {
-            const layout = videoLayouts.current[post.id];
-            if (!layout) return;
+  const layoutMeasurementHeight = event.nativeEvent.layoutMeasurement.height;
+  const contentSizeHeight = event.nativeEvent.contentSize.height;
 
-            const isVisible =
-                layout.pageY < newScrollPosition + SCREEN_HEIGHT &&
-                layout.pageY + layout.height > newScrollPosition;
+  // স্ক্রল একদম নিচে এলে নতুন পোস্ট লোড করুন
+  if (contentOffsetY + layoutMeasurementHeight >= contentSizeHeight - 50) {
+    fetchMorePosts();
+  }
+};
+const scrollToTop = () => {
+  if (flatListRef.current) {
+    flatListRef.current.scrollToOffset({ animated: true, offset: 0 });
+  }
+};
+  useEffect(() => {
+  const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+  return () => backHandler.remove(); // ক্লিনআপ
+}, [isAtTop]);
 
-            if (!isVisible && currentPlayingId === post.id) {
-                videoRefs.current[post.id]?.pauseAsync();
-                setCurrentPlayingId(null);
-            }
-        });
-    }, [currentPlayingId, posts, SCREEN_HEIGHT]);
+
+
+  const scrollPositionRef = useRef(0);
 
     useEffect(() => {
         // স্ক্রল লিসেনার অ্যাড এবং রিমুভ করুন
@@ -695,14 +794,7 @@ useEffect(() => {
     videoLayouts.current[id] = { pageY: y, height };
   };
 
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-
-    fetchUserNameAndProfile();
-    fetchPosts();
-
-    return () => backHandler.remove();
-  }, [scrollPosition]);
+  
   
   const handleLike = async (postId) => {
   const email = await SecureStore.getItemAsync('user-email');
@@ -1022,16 +1114,17 @@ const StContainerBorderColor = {
     
     
     <FlatList
-  data={loading ? [] : posts} // পোস্টের ডেটা এখানে যুক্ত করা হয়েছে
+  data={loading ? [] : posts}
   keyExtractor={(item) => item.id.toString()}
   style={[styles.mainContainer, mainContainerStyle ]}
   showsVerticalScrollIndicator={false}
   scrollEventThrottle={16}
-  ref={scrollViewRef}
+  ref={flatListRef}
   onScroll={handleScroll}
+  removeClippedSubviews={true}
   bounces={false}
-      alwaysBounceVertical={false}
-      overScrollMode="never"
+  alwaysBounceVertical={false}
+  overScrollMode="never"
   refreshControl={
     <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
   }
@@ -1051,7 +1144,10 @@ const StContainerBorderColor = {
       // **Header Component**
       ListHeaderComponent={
         <View style={[styles.createStory]}>
-          <Image
+          <TouchableOpacity onPress={() =>
+          navigation.navigate('StoryCreatePage')
+        }>
+            <Image
             source={profilePicture ? { uri: profilePicture } : null}
             style={[styles.createStImg, offWhiteColor]}
           />
@@ -1059,6 +1155,7 @@ const StContainerBorderColor = {
             source={require("../assets/appIcon.png")}
             style={[styles.plusIcon, plusIconBorderColor]}
           />
+          </TouchableOpacity>
           <Text style={[styles.createStText, dynamicTextColor]}>Create Story</Text>
         </View>
       }
@@ -1407,7 +1504,7 @@ const StContainerBorderColor = {
     <View style={styles.activityBtnLike}>
       <AntDesign
   style={[
-    styles.likeIcon,
+    styles.likeIcon, spanTextColor,
     post.likedUsers && currentUserEmail && post.likedUsers[currentUserEmail] 
       ? styles.reactRoundIcon // Apply reactRoundIcon style if liked
       : null // No additional style if not liked
@@ -1421,16 +1518,16 @@ const StContainerBorderColor = {
   color={
     post.likedUsers && currentUserEmail && post.likedUsers[currentUserEmail]
       ? '#fff' // Liked color
-      : 'gray' // Default color
+      : null // Default color
   }
 />
       <Text
         style={[
-          styles.activityText,
+          styles.activityText, spanTextColor,
           spanTextColor,
           post.likedUsers && currentUserEmail && post.likedUsers[currentUserEmail]
             ? { color: '#1876f2' } // Liked: red color
-            : { color: 'gray' } // Default: gray color
+            : null
         ]}
       >
         Like
@@ -1560,7 +1657,6 @@ const styles = StyleSheet.create({
   },
   postImageBox: {
     width: '100%',
-    height: 452,
     borderTopColor: '#ccc',
     borderBottomColor: '#ccc',
     borderTopWidth: 0.8,
@@ -1912,6 +2008,7 @@ const styles = StyleSheet.create({
   reactRoundIcon:{
     backgroundColor: '#1876f2',
     padding: 4,
+    color: '#fff',
     borderRadius: 50,
     elevation: 1,
     fontSize: 15,

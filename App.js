@@ -13,6 +13,8 @@ import { Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
 import { Pacifico_400Regular, Pacifico_700Bold } from '@expo-google-fonts/pacifico';
 import VideoPage from './src/screens/VideoPage';
 import VerifyPage from './src/screens/VerifyPage';
+import YoutubePlayer from './src/screens/YoutubePlayer';
+import StoryCreatePage from './src/screens/StoryCreatePage';
 import AccountCenter from './src/screens/AccountCenter';
 import PostCreatePage from './src/screens/PostCreatePage';
 import ShowReactPage from './src/screens/ShowReactPage';
@@ -41,7 +43,6 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(null);
   const [appState, setAppState] = useState(AppState.currentState);
   const [userData, setUserData] = useState(null);
-  
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
@@ -51,6 +52,22 @@ export default function App() {
     Pacifico_400Regular,
     Pacifico_700Bold,
   });
+
+  const [isFontReady, setIsFontReady] = useState(false);
+
+  useEffect(() => {
+    const checkFontLoadStatus = async () => {
+      const fontStatus = await SecureStore.getItemAsync('fonts-loaded');
+      if (fontStatus === 'true') {
+        setIsFontReady(true);
+      } else if (fontsLoaded) {
+        await SecureStore.setItemAsync('fonts-loaded', 'true');
+        setIsFontReady(true);
+      }
+    };
+
+    checkFontLoadStatus();
+  }, [fontsLoaded]);
   
   
   useEffect(() => {
@@ -412,7 +429,30 @@ export default function App() {
             },
           }}
         />
-         
+         <Stack.Screen 
+          name="StoryCreatePage" 
+          component={StoryCreatePage}
+          options={{
+            headerShown: false,
+            cardStyleInterpolator: CardStyleInterpolators.forBottomSheetAndroid,
+            transitionSpec: {
+              open: { animation: 'timing', config: { duration: 160 } },
+              close: { animation: 'timing', config: { duration: 160 } },
+            },
+          }}
+        />
+        <Stack.Screen 
+          name="YoutubePlayer" 
+          component={YoutubePlayer}
+          options={{
+            headerShown: false,
+            cardStyleInterpolator: CardStyleInterpolators.forBottomSheetAndroid,
+            transitionSpec: {
+              open: { animation: 'timing', config: { duration: 160 } },
+              close: { animation: 'timing', config: { duration: 160 } },
+            },
+          }}
+        />
       </Stack.Navigator>
       <Toast />
     </NavigationContainer>

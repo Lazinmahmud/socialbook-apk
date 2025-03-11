@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Text, TouchableNativeFeedback, Platform, KeyboardAvoidingView, StatusBar } from 'react-native';
+import { View, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Text, TouchableNativeFeedback, Platform, KeyboardAvoidingView, StatusBar, BackHandler} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getDatabase, ref, onValue } from 'firebase/database';
 import * as SecureStore from 'expo-secure-store';
@@ -11,6 +11,24 @@ export default function SearchPage({ route, navigation }) {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const searchInputRef = useRef(null); // Create a ref for 
   const [currentTheme, setCurrentTheme] = useState('light'); // Default theme set as 'light'
+
+// Handle hardware back button press
+  useEffect(() => {
+    const backAction = () => {
+      // Go back to the previous screen
+      navigation.goBack();
+      return true; // Return true to prevent default behavior
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Cleanup listener
+  }, [navigation]);
+
+
 
   // Focus on TextInput if autoFocus is true
   useEffect(() => {

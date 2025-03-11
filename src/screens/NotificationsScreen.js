@@ -29,53 +29,111 @@ export default function NotificationsScreen( route ) {
   ]);
   
   const renderTabBar = (props) => (
-    <TabBar
-      {...props}
-      indicatorStyle={{ backgroundColor: '#000' }} // active tab indicator style
-      style={[styles.tabbar, containerStyle]}
-      activeColor="#000" // Active tab text color
-      inactiveColor="gray" // Inactive tab text color
-    />
-  );
-  
-  const NotificationItem = ({ item }) => (
-  <TouchableNativeFeedback
-    background={
-      Platform.OS === 'android'
-        ? TouchableNativeFeedback.Ripple('rgba(0, 0, 0, .10)', false)
-        : undefined
-    }
-    onPress={() => handleNotificationPress(item)}
-  >
-    <View style={[styles.notifiBox, !item.seenStatus && styles.unreadNotifi]}>
-      <View style={styles.profilebox}>
-        <Image source={{ uri: item.profileImage }} style={styles.notifyUserProfile} />
-        {item.commentText ? (
-          <Ionicons style={styles.commentIcon} name="chatbubble" />
-        ) : (
-          <AntDesign name="like1" style={styles.likeIcon} />
-        )}
-      </View>
-      <View style={styles.notifiContentBox}>
-        <Text style={styles.notifyTextContent}>
-          <Text style={styles.nameText}>{item.commentedBy || item.likedBy}{' '}</Text>
-          {item.commentText ? 'commented on your post' : 'recently liked your post'}
-        </Text>
-        <View style={styles.notifyTimeAndReactionBox}>
-          <Text style={styles.notifyTime}>
-            {new Date().getTime() - new Date(item.timestamp).getTime() <= 60000
-              ? 'Just now'
-              : formatDistanceToNow(new Date(item.timestamp), { addSuffix: true }).replace('about ', '')
-            }
-          </Text>
-          <Text style={styles.dot}>•</Text>
-          <Text style={styles.reactionText}>{item.reactionText}</Text>
-        </View>
-      </View>
-      {item.postImage && <Image source={{ uri: item.postImage }} style={styles.notifiImg} />}
-    </View>
-  </TouchableNativeFeedback>
+  <TabBar
+    {...props}
+    indicatorStyle={{ backgroundColor: currentTheme === 'dark' ? '#fff' : '#000' }} // Active Tab Indicator
+    style={[styles.tabbar, { backgroundColor: 'transparent' }]} // Tabbar BG Transparent
+    activeColor={currentTheme === 'dark' ? '#fff' : '#000'} // Active Tab Text Color
+    inactiveColor={currentTheme === 'dark' ? '#bbb' : 'gray'} // Inactive Tab Text Color
+  />
 );
+  
+  const NotificationItem = ({ item }) => {
+  const handleMenuPress = () => {
+    // এলার্ট শো করা
+    Alert.alert(
+      "Delete Notification",
+      "Are you sure you want to delete this notification?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => handleDelete(item), // ডিলিট ফাংশন কল করা
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  // ডিলিট ফাংশন
+  const handleDelete = async (item) => {
+    try {
+      // Firebase থেকে নোটিফিকেশন ডিলিট করা
+      const notificationRef = database.ref(`All_Post/${item.postId}/notifications/${item.timestamp}`);
+      await notificationRef.remove(); // নোটিফিকেশন মুছে ফেলা
+
+      // যদি আপনি স্টেটের মধ্যে থেকে এই আইটেম মুছতে চান, তবে এখানে `setNotifications` ব্যবহার করুন:
+      // setNotifications(prevNotifications => prevNotifications.filter(notification => notification.timestamp !== item.timestamp));
+
+      console.log("Notification deleted successfully");
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  return (
+    <TouchableNativeFeedback
+      background={
+        Platform.OS === 'android'
+          ? TouchableNativeFeedback.Ripple('rgba(0, 0, 0, .10)', false)
+          : undefined
+      }
+      onPress={() => handleNotificationPress(item)}
+    >
+      <View
+  style={[
+    styles.notifiBox,
+    item.seenStatus
+      ? { backgroundColor: 'transparent' } // Seen হলে transparent হবে
+      : { backgroundColor: currentTheme === 'dark' ? '#24303C' : '#E3F2FD' }, // Dark বা Light Mode অনুযায়ী কালার সেট হবে
+  ]}
+>
+        <View style={styles.profilebox}>
+          <Image source={{ uri: item.profileImage }} style={styles.notifyUserProfile} />
+          {item.commentText ? (
+            <Ionicons style={styles.commentIcon} name="chatbubble" />
+          ) : (
+            <AntDesign name="like1" style={styles.likeIcon} />
+          )}
+        </View>
+        <View style={styles.notifiContentBox}>
+          <Text style={[styles.notifyTextContent, dynamicTextColor]}>
+            <Text style={[styles.nameText, dynamicTextColor]}>{item.commentedBy || item.likedBy}{' '}</Text>
+            {item.commentText ? 'commented on your post' : 'liked your post'}
+          </Text>
+          {/* এক লাইনে `postText` দেখাবে */}
+          {item.postText && (
+            <Text 
+              style={[styles.postText, dynamicTextColor]} 
+              numberOfLines={1} 
+              ellipsizeMode="tail"
+            >
+              {`"${item.postText}"`}
+            </Text>
+          )}
+          <View style={styles.notifyTimeAndReactionBox}>
+            <Text style={styles.notifyTime}>
+              {new Date().getTime() - new Date(item.timestamp).getTime() <= 60000
+                ? 'Just now'
+                : formatDistanceToNow(new Date(item.timestamp), { addSuffix: true }).replace('about ', '')
+              }
+            </Text>
+            <Text style={styles.dot}>•</Text>
+            <Text style={styles.reactionText}>{item.reactionText}</Text>
+          </View>
+        </View>
+        {item.postImage && <Image source={{ uri: item.postImage }} style={styles.notifiImg} />}
+        <TouchableOpacity style={styles.menuIcon} onPress={handleMenuPress}>
+          <Ionicons style={[styles.none, dynamicTextColor]} name="ellipsis-horizontal" size={18} />
+        </TouchableOpacity>
+      </View>
+    </TouchableNativeFeedback>
+  );
+};
   
   
 const NewNotifiRoute = () => (
@@ -84,6 +142,9 @@ const NewNotifiRoute = () => (
     keyExtractor={(item, index) => index.toString()}
     showsVerticalScrollIndicator={false}
     renderItem={({ item }) => <NotificationItem item={item} />}
+    refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    } // Pull to refresh ফিচার
   />
 );
 
@@ -93,6 +154,9 @@ const OldNotifiRoute = () => (
     keyExtractor={(item, index) => index.toString()}
     showsVerticalScrollIndicator={false}
     renderItem={({ item }) => <NotificationItem item={item} />}
+    refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    } // Pull to refresh ফিচার
   />
 );
 
@@ -139,11 +203,10 @@ const OldNotifiRoute = () => (
   }, []);
 
 // রিফ্রেশ হ্যান্ডলার
-const onRefresh = () => {
+const onRefresh = async () => {
   setRefreshing(true);
-  fetchNotifications().then(() => {
-    setRefreshing(false);
-  });
+  await fetchNotifications(); // নতুন নোটিফিকেশন লোড করবে
+  setRefreshing(false);
 };
 
 // Firebase থেকে নোটিফিকেশন লোড করা এবং ফিল্টার করা
@@ -320,6 +383,9 @@ const containerStyle = {
     borderColor: currentTheme === 'dark' ? '#000' : '#C9CCD1',
   };
 
+const darkBgColor = {
+    backgroundColor: currentTheme === 'dark' ? '#24303C' : '#E3F2FD',
+  };
 
 const dynamicTextColor = {
     color: currentTheme === 'dark' ? '#fff' : '#000',
@@ -398,9 +464,9 @@ const styles = StyleSheet.create({
   },
   notifiBox: {
     width: '100%',
-    paddingHorizontal: 10,
+    paddingLeft: 10,
+    paddingRight: 5,
     paddingVertical: 15,
-    backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -484,8 +550,8 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   notifiImg:{
-    width: 50,
-    height: 50,
+    width: 45,
+    height: 45,
     borderRadius: 5,
     backgroundColor: '#efefef',
   },
@@ -499,12 +565,14 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
   },
-  
   unreadNotifi: {
-    backgroundColor: '#E3F2FD', // হালকা নীল (unread notification)
+    backgroundColor: '#E3F2FD',
   },
   tabbar:{
      marginTop: -10,
-     
+   },
+   menuIcon:{
+     marginLeft: 4,
+     padding: 3,
    }
 });

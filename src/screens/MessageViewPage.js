@@ -325,6 +325,9 @@ useEffect(() => {
           <Text style={[styles.headerName]}>{fullName}</Text>
   <Text style={styles.typingIndicator}>Active now</Text>
         </View>
+        <TouchableOpacity style={[styles.callIcon]}>
+          <Ionicons name="call-outline" size={27} color="black" />
+        </TouchableOpacity>
       </View>
 
       {/* FlatList for Messages */}
@@ -393,6 +396,7 @@ const styles = StyleSheet.create({
     padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    
   },
   backIcon: {
     padding: 3,
@@ -408,7 +412,12 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     marginLeft: 10,
+    
   },
+  callIcon:{
+  marginLeft: 'auto',
+  padding: 5,
+},
   headerName: {
     fontSize: 16,
     width: 125,
@@ -567,4 +576,5 @@ seenProfileImage: {
   borderRadius: 8,
   marginLeft: 'auto',
 },
+
 });

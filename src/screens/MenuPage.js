@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl , TouchableNativeFeedback, Platform, Animated, StatusBar, Pressable, FlatList, Linking } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl , TouchableNativeFeedback, Platform, Animated, StatusBar, Pressable, FlatList, Linking, BackHandler } from 'react-native'; 
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import ParsedText from 'react-native-parsed-text';
@@ -27,6 +28,21 @@ const fadeAnim1 = useRef(new Animated.Value(1)).current; // প্রথম ল�
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   
+  useEffect(() => {
+    // Back press handle করার জন্য
+    const backAction = () => {
+      navigation.goBack(); // আগের স্ক্রীনে ফিরে যাব
+      return true; // ইভেন্ট হ্যান্ডল করা হয়েছে
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    // Cleanup back handler on unmount
+    return () => backHandler.remove();
+  }, [navigation]);
   
   useEffect(() => {
     const fetchFollowCounts = async () => {
@@ -948,7 +964,7 @@ const styles = StyleSheet.create({
   },
   postImageBox: {
     width: '100%',
-    height: 452,
+    
     borderTopColor: '#ccc',
     borderBottomColor: '#ccc',
     borderTopWidth: 0.8,

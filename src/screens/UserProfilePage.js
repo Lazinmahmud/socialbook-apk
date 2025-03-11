@@ -577,7 +577,6 @@ const styles = StyleSheet.create({
   },
   postImageBox: {
     width: '100%',
-    height: 452,
     borderTopColor: '#ccc',
     borderBottomColor: '#ccc',
     borderTopWidth: 0.8,
