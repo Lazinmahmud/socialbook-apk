@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl , TouchableNativeFeedback, Platform, Animated, StatusBar, Pressable, FlatList, Linking, BackHandler } from 'react-native'; 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import ParsedText from 'react-native-parsed-text';
@@ -10,7 +10,8 @@ import { ref, query, orderByChild, equalTo, onValue } from "firebase/database";
 import { Video } from 'expo-av'; 
 import AntDesign from '@expo/vector-icons/AntDesign';
 
-export default function ProfileScreen({ navigation, route }) {
+export default function ProfileScreen({ route }) { 
+  const navigation = useNavigation();
   const [profilePicture, setProfilePicture] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -28,21 +29,22 @@ const fadeAnim1 = useRef(new Animated.Value(1)).current; // প্রথম ল�
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   
-  useEffect(() => {
-    // Back press handle করার জন্য
-    const backAction = () => {
-      navigation.goBack(); // আগের স্ক্রীনে ফিরে যাব
-      return true; // ইভেন্ট হ্যান্ডল করা হয়েছে
-    };
+  useFocusEffect(
+    React.useCallback(() => {
+      const backAction = () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          BackHandler.exitApp();
+        }
+        return true;
+      };
 
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction
-    );
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
 
-    // Cleanup back handler on unmount
-    return () => backHandler.remove();
-  }, [navigation]);
+      return () => backHandler.remove();
+    }, [navigation])
+  );
   
   useEffect(() => {
     const fetchFollowCounts = async () => {
@@ -666,6 +668,11 @@ const profileBorderColor = {
               <Text style={[styles.name, dynamicTextColor]}>{`${firstName} ${lastName}`}</Text>
               <Image source={require('../assets/verified.png')} style={styles.verifyIcon} />
             </View>
+            <View style={styles.founderBox}>
+              <Ionicons name="bag" color="#808080" size={20} />
+              <Text style={styles.dotText}>•</Text>
+              <Text style={[styles.labelTextProfile, dynamicTextColor]}>Founder and CEO at Socialbook</Text>
+            </View>
 
             <View style={styles.bioBox}>
               <Text style={[styles.bioText, dynamicTextColor]}>{bio}</Text>
@@ -814,6 +821,26 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  founderBox:{
+    marginTop: 5,
+    marginBottom: 5,
+    maxWidth: '50%',
+    marginLeft: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dotText:{
+    marginLeft: 5,
+    color: '#808080',
+  },
+  labelTextProfile:{
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 20,
+    fontFamily: 'Pacifico_400Regular',
+    fontSize: 13,
+    
   },
   bioBox: {
     width: '80%',

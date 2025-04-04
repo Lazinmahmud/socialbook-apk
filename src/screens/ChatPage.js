@@ -240,7 +240,7 @@ const renderChatItem = ({ item, currentUserEmail }) => {
   const textColor = isSender ? 'gray' : isMessageSeen ? 'gray' : '#000';
 
   // Prefix নির্ধারণ (You বা He)
-  const messagePrefix = isSender ? 'You: ' : 'He: ';
+  const messagePrefix = isSender ? 'You: ' : 'They: ';
 
   return (
     <TouchableNativeFeedback

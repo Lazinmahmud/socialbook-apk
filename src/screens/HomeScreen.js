@@ -744,17 +744,17 @@ useEffect(() => {
 
 const handleBackPress = () => {
   if (!isAtTop) {
-    // স্ক্রল উপরে নিয়ে যাও
     scrollToTop();
-    return true; // ব্যাক প্রেস হ্যান্ডেল করা হয়েছে
+    onRefresh();
+    return true;
   } else {
-    // ব্যাক প্রেস করলে সরাসরি অ্যাপ বন্ধ হবে
     BackHandler.exitApp();
+    onRefresh();
     return true;
   }
 };
 
-  // FlatList স্ক্রল করার সময় উপরে থাকলে 'isAtTop' আপডেট হবে
+
   const handleScroll = (event) => {
   const contentOffsetY = event.nativeEvent.contentOffset.y;
   scrollPositionRef.current = contentOffsetY;
@@ -2117,7 +2117,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   personAddIcon:{
-    
     backgroundColor: '#fff',
     padding: 10,
     elevation: 3,

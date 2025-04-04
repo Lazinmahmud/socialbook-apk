@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, Dimensions, BackHandler, StatusBar } from 'react-native';
 import { database } from '../components/firebaseConfig';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
-export default function FriendScreen() {
+export default function FriendScreen( route ) {
   const [followRequests, setFollowRequests] = useState([]);
   const [userProfiles, setUserProfiles] = useState({});
   const [loggedInUser, setLoggedInUser] = useState('');
@@ -19,8 +19,58 @@ export default function FriendScreen() {
     { key: 'following', title: 'Following' },
     { key: 'suggetion', title: 'Suggetion' },
   ]);
-  const [followingList, setFollowingList] = useState([]);
+  const [followingList, setFollowingList] = useState([]); 
+  const [currentTheme, setCurrentTheme] = useState('light');
   
+  const dynamicTextColor = {
+    color: currentTheme === 'dark' ? '#fff' : '#000',
+  };
+  const containerStyle = {
+    backgroundColor: currentTheme === 'dark' ? '#262729' : '#fff',
+  };
+  
+  
+  useEffect(() => {
+    const loadDarkModeSetting = async () => {
+      try {
+        const darkModeSetting = await SecureStore.getItemAsync('darkModeSetting');
+        setCurrentTheme(darkModeSetting === 'On' ? 'dark' : 'light');
+      } catch (error) {
+        console.error('Error loading dark mode setting:', error);
+      }
+    };
+    loadDarkModeSetting();
+  }, []);
+
+  useEffect(() => {
+    if (route?.params?.currentTheme) {
+      setCurrentTheme(route.params.currentTheme);
+    }
+  }, [route?.params?.currentTheme]);
+
+  useEffect(() => {
+    StatusBar.setBackgroundColor(currentTheme === 'dark' ? '#262729' : '#fff');
+    StatusBar.setBarStyle(currentTheme === 'dark' ? 'light-content' : 'dark-content');
+  }, [currentTheme]);
+  
+  
+  // Back press হ্যান্ডলার
+  useFocusEffect(
+    React.useCallback(() => {
+      const backAction = () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          BackHandler.exitApp();
+        }
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+      return () => backHandler.remove();
+    }, [navigation])
+  );
   
   // Scroll Effect for Elevation
   const onScroll = (event) => {
@@ -195,16 +245,16 @@ useEffect(() => {
 const renderTabBar = (props) => (
     <TabBar
       {...props}
-      indicatorStyle={{ backgroundColor: '#000' }}
-      style={{ backgroundColor: 'white' }}
-      activeColor="#000"
-      inactiveColor="gray"
+      indicatorStyle={{ backgroundColor: currentTheme === 'dark' ? '#fff' : '#000' }}
+      style={{backgroundColor: currentTheme === 'dark' ? '#262729' : '#fff'}}
+      activeColor={currentTheme === 'dark' ? '#fff' : '#000'}
+      inactiveColor={currentTheme === 'dark' ? '#bbb' : 'gray'}
     />
   );
   
   const FollowersRoute = () => (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, containerStyle]}
       onScroll={onScroll}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={16}
@@ -300,8 +350,8 @@ const renderTabBar = (props) => (
               <View key={index} style={styles.followBackBox}>
                 <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImg} />
                 <View>
-                  <Text style={styles.userName}>{userProfile.fullName || 'Unknown User'}</Text>
-                <Text>0 followers</Text>
+                  <Text style={[styles.userName, dynamicTextColor]}>{userProfile.fullName || 'Unknown User'}</Text>
+                <Text style={[styles.none, dynamicTextColor]}>0 followers</Text>
                 </View>
                 <TouchableOpacity
   style={[
@@ -328,7 +378,7 @@ const renderTabBar = (props) => (
 
   const FollowingRoute = () => (
   <ScrollView
-    style={styles.container}
+    style={[styles.container, containerStyle]}
     onScroll={onScroll}
     scrollEventThrottle={16}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -369,7 +419,7 @@ const renderTabBar = (props) => (
   
   const SuggetionRoute = () => (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, containerStyle]}
       onScroll={onScroll}
       scrollEventThrottle={16}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -380,12 +430,12 @@ const renderTabBar = (props) => (
 
   return (
     <View style={styles.mainContainer}>
-      <View style={[styles.header]}>
-        <Text style={styles.headerText}>Followers</Text>
+      <View style={[styles.header, containerStyle]}>
+        <Text style={[styles.headerText, dynamicTextColor]}>Followers</Text>
         <TouchableOpacity
           style={styles.searchBox}
           onPress={() => navigation.navigate('SearchPage', { autoFocus: true })}>
-          <Ionicons style={styles.searchIcon} name="search-outline" />
+          <Ionicons style={[styles.searchIcon, dynamicTextColor]} name="search-outline" />
         </TouchableOpacity>
       </View>
 

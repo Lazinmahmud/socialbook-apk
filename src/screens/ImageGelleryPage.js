@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, BackHandler } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 
 export default function ImageGalleryPage( route ) {
@@ -17,6 +17,26 @@ export default function ImageGalleryPage( route ) {
   const [hasNextPage, setHasNextPage] = useState(true);
   const [pageCursor, setPageCursor] = useState(null);
   const [currentTheme, setCurrentTheme] = useState('light');
+
+
+// Back press হ্যান্ডলার
+  useFocusEffect(
+    React.useCallback(() => {
+      const backAction = () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          BackHandler.exitApp();
+        }
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+      return () => backHandler.remove();
+    }, [navigation])
+  );
+
 
   const loadAlbumItems = useCallback(async () => {
     try {

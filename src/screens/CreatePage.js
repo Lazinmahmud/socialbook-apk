@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Image, TextInput, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, BackHandler, StatusBar, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect} from '@react-navigation/native';
 import { database, storage } from '../components/firebaseConfig'; // Correct import
 import * as SecureStore from 'expo-secure-store';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -35,7 +35,23 @@ export default function PostCreatePage() {
   const slideAnim = useRef(new Animated.Value(300)).current;
 
 
+// Back press হ্যান্ডলার
+  useFocusEffect(
+    React.useCallback(() => {
+      const backAction = () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          BackHandler.exitApp();
+        }
+        return true;
+      };
 
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+      return () => backHandler.remove();
+    }, [navigation])
+  );
     
     
  useEffect(() => {

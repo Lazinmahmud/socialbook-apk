@@ -104,10 +104,7 @@ const ImageViewPage = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar 
-        barStyle="light-content"
-        backgroundColor="#000000"
-      />
+      
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={30} color="white" />

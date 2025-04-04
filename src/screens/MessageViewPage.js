@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, FlatList, BackHandler, ActivityIndicator, Alert, Pressable, StatusBar } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, FlatList, BackHandler, StatusBar, ActivityIndicator, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +12,48 @@ export default function MessageViewPage({ route, navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const { profilePicture, fullName, email: receiverEmail } = route.params;
   const flatListRef = useRef(null);
+  const [currentTheme, setCurrentTheme] = useState('light');
+  
+  const dynamicTextColor = {
+    color: currentTheme === 'dark' ? '#fff' : '#000',
+  };
+  const containerStyle = {
+    backgroundColor: currentTheme === 'dark' ? '#262729' : '#fff',
+  };
+  const bodyStyle = {
+    backgroundColor: currentTheme === 'dark' ? '#000' : '#EAEBED',
+  };
+  
+  const SenderBuble = {
+    backgroundColor: currentTheme === 'dark' ? '#134D37' : '#D8FDD2',
+  };
+  
+  const reciverBubble = {
+    backgroundColor: currentTheme === 'dark' ? '#1C2329' : '#fff',
+  };
+  
+ useEffect(() => {
+    const loadDarkModeSetting = async () => {
+      try {
+        const darkModeSetting = await SecureStore.getItemAsync('darkModeSetting');
+        setCurrentTheme(darkModeSetting === 'On' ? 'dark' : 'light');
+      } catch (error) {
+        console.error('Error loading dark mode setting:', error);
+      }
+    };
+    loadDarkModeSetting();
+  }, []);
+
+  useEffect(() => {
+    if (route?.params?.currentTheme) {
+      setCurrentTheme(route.params.currentTheme);
+    }
+  }, [route?.params?.currentTheme]);
+
+  useEffect(() => {
+    StatusBar.setBackgroundColor(currentTheme === 'dark' ? '#262729' : '#fff');
+    StatusBar.setBarStyle(currentTheme === 'dark' ? 'light-content' : 'dark-content');
+  }, [currentTheme]);
   
   
   // মেসেজ দেখার সময় স্ট্যাটাস আপডেট করা
@@ -145,7 +187,7 @@ const formatTime = (timestamp) => {
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear()
   ) {
-    return formattedTime;
+    return `Today ${formattedTime}`;
   }
 
   // ✅ যদি গতকালের দিন হয়
@@ -160,10 +202,23 @@ const formatTime = (timestamp) => {
     return `Yesterday at ${formattedTime}`;
   }
 
-  // ✅ যদি আরও পুরোনো হয় (দিনের নাম সহ দেখাবে)
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dayName = days[date.getDay()];
-  return `${dayName} at ${formattedTime}`;
+  // ✅ যদি ৩ দিনের বেশি পুরোনো হয়
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(now.getDate() - 3);
+
+  if (date <= threeDaysAgo) {
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    const monthName = months[date.getMonth()];
+    const day = date.getDate();
+
+    return `${monthName} ${day} at ${formattedTime}`;
+  }
+
+  // ✅ অন্য সব ক্ষেত্রে (আজ বা গতকাল)
+  return formattedTime;
 };
 
 useEffect(() => {
@@ -273,9 +328,16 @@ useEffect(() => {
           />
         ) : null}
 
-        <View style={[styles.chatBubble, item.senderEmail !== receiverEmail ? styles.userChatBubble : null]}>
+        <View
+  style={[
+    styles.chatBubble,
+    item.senderEmail !== receiverEmail
+      ? [styles.userChatBubble, SenderBuble]  // SenderBuble style will be applied with userChatBubble
+      : reciverBubble,  // reciverBubble style will be applied if not sender
+  ]}
+>
           {item.message ? (
-            <Text style={[styles.messageText, item.senderEmail !== receiverEmail ? styles.userMessageText : null]}>
+            <Text style={[styles.messageText, dynamicTextColor, item.senderEmail !== receiverEmail ? styles.userMessageText : null]}>
               {item.message}
             </Text>
           ) : null}
@@ -311,22 +373,22 @@ useEffect(() => {
 };
 
   return (
-    <View style={[styles.container]}>
+    <View style={[styles.container, bodyStyle]}>
       {/* Header Section */}
-      <View style={[styles.header]}>
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Ionicons style={[styles.none]} name="arrow-back-outline" size={27} color="black" />
+      <View style={[styles.header, containerStyle]}>
+        <TouchableOpacity style={styles.backIcon, dynamicTextColor} onPress={() => navigation.goBack()}>
+          <Ionicons style={[styles.none, dynamicTextColor]} name="arrow-back-outline" size={27} color="black" />
         </TouchableOpacity>
         <Image
           source={profilePicture ? { uri: profilePicture } : require('../assets/user.png')}
           style={styles.headerProfile}
         />
         <View style={styles.headerContent}>
-          <Text style={[styles.headerName]}>{fullName}</Text>
-  <Text style={styles.typingIndicator}>Active now</Text>
+          <Text style={[styles.headerName, dynamicTextColor]}>{fullName}</Text>
+  <Text style={[styles.typingIndicator, dynamicTextColor]}>Active now</Text>
         </View>
         <TouchableOpacity style={[styles.callIcon]}>
-          <Ionicons name="call-outline" size={27} color="black" />
+          <Ionicons style={[styles.none, dynamicTextColor]} name="call-outline" size={27} color="black" />
         </TouchableOpacity>
       </View>
 
@@ -355,16 +417,17 @@ useEffect(() => {
       )}
 
       {/* Bottom Bar Section */}
-      <View style={[styles.bottomBar]}>
-        <TouchableOpacity style={[styles.iconContainer]}>
-          <Ionicons style={[styles.none]} name="add" size={24} color="black" />
+      <View style={[styles.bottomBar, bodyStyle]}>
+        <TouchableOpacity style={[styles.iconContainer, containerStyle]}>
+          <Ionicons style={[styles.none, dynamicTextColor]} name="add" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Image Preview in Input Box */}
         <View style={styles.inputContainer}>
          <TextInput
-  style={[styles.input, selectedImage ? styles.inputWithImage : null]}
+  style={[styles.input, dynamicTextColor, containerStyle, selectedImage ? styles.inputWithImage : null]}
   placeholder="Message..."
+  placeholderTextColor={currentTheme === 'dark' ? '#fff' : '#808080'}
   value={message}
   onChangeText={setMessage} // এখানে handleTyping ফাংশন কল হচ্ছে
 />
@@ -373,8 +436,8 @@ useEffect(() => {
           )}
         </View>
 
-        <TouchableOpacity style={styles.iconContainer} onPress={sendMessage}>
-          <Ionicons name="send" size={24}/>
+        <TouchableOpacity style={[styles.iconContainer, containerStyle]} onPress={sendMessage}>
+          <Ionicons style={[styles.none,dynamicTextColor]} name="send" size={24}/>
         </TouchableOpacity>
       </View>
     </View>
